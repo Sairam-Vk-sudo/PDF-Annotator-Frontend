@@ -16,7 +16,7 @@ export default defineConfig({
   build: {
     outDir: 'build',
     rollupOptions: {
-      external: ['react-router-dom']
+      external: ['react-router-dom', "socket.io-client"]
     }
   }
 });
