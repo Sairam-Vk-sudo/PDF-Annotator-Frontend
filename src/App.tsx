@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
 import WebViewer from "@pdftron/webviewer";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 import { useLocation } from "react-router-dom";
 import "./App.css";
 
-const socket = io("http://localhost:3001");
+const socket = io("https://pdf-annotator-backend.onrender.com");
 
 const App = () => {
   const viewer = useRef(null);
