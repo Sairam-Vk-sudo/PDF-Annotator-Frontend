@@ -1,45 +1,152 @@
-import React, { useRef, useEffect } from 'react';
-import WebViewer from '@pdftron/webviewer';
-import './App.css';
+import React, { useRef, useEffect, useState } from "react";
+import WebViewer from "@pdftron/webviewer";
+import io from "socket.io-client";
+import { useLocation } from "react-router-dom";
+import "./App.css";
+
+const socket = io("http://localhost:3001");
 
 const App = () => {
   const viewer = useRef(null);
+  const location = useLocation();
+  const [instance, setInstance] = useState(null);
+  const [userRole, setUserRole] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [documentUrl, setDocumentUrl] = useState("");
 
-  // if using a class, equivalent of componentDidMount 
   useEffect(() => {
-    // If you prefer to use the Iframe implementation, you can replace this line with: WebViewer.Iframe(...)
-    WebViewer.WebComponent(
+    if (!viewer.current) return;
+
+    WebViewer(
       {
-        path: '/webviewer/lib',
-        initialDoc: '/files/PDFTRON_about.pdf',
-        licenseKey: 'your_license_key',  // sign up to get a free trial key at https://dev.apryse.com
+        path: "/webviewer/lib",
+        licenseKey: "demo:1740855707275:614929260300000000ba0af63ff8f99ffbe49c042ca80c5f78b790cd57",
       },
-      viewer.current,
+      viewer.current
     ).then((instance) => {
-      const { documentViewer, annotationManager, Annotations } = instance.Core;
+      console.log("✅ WebViewer initialized:", instance);
+      setInstance(instance);
 
-      documentViewer.addEventListener('documentLoaded', () => {
-        const rectangleAnnot = new Annotations.RectangleAnnotation({
-          PageNumber: 1,
-          // values are in page coordinates with (0, 0) in the top left
-          X: 100,
-          Y: 150,
-          Width: 200,
-          Height: 50,
-          Author: annotationManager.getCurrentUser()
+      const { documentViewer, annotationManager } = instance.Core;
+
+      if (!documentViewer) {
+        console.error("❌ documentViewer is null!");
+        return;
+      }
+
+      documentViewer.addEventListener("documentLoaded", async () => {
+        annotationManager.setCurrentUser(userRole);
+
+        annotationManager.addEventListener("annotationChanged", async (changes, action) => {
+          if (action === "add" || action === "modify" || action === "delete") {
+            const xfdfString = await annotationManager.exportAnnotations();
+            if (roomId) {
+              console.log(`📌 Emitting annotation update from ${userRole}`);
+              socket.emit("annotationUpdate", { roomId, xfdfString });
+            }
+          }
         });
+      });
 
-        annotationManager.addAnnotation(rectangleAnnot);
-        // need to draw the annotation otherwise it won't show up until the page is refreshed
-        annotationManager.redrawAnnotation(rectangleAnnot);
+      // Load document when received from server
+      socket.on("documentSelected", ({ fileUrl }) => {
+        console.log(`📄 Received document: ${fileUrl}`);
+        console.log("🔍 Checking WebViewer instance:", instance);
+
+        if (!instance || !instance.UI) {
+          console.error("❌ WebViewer instance or UI is not available.");
+          return;
+        }
+
+        setDocumentUrl(fileUrl);
+        instance.UI.loadDocument(fileUrl);
+      });
+
+      // Apply annotations when received from server
+      socket.on("annotationUpdate", async ({ xfdfString }) => {
+        console.log("📌 Applying received annotations...");
+        await annotationManager.importAnnotations(xfdfString);
+      });
+
+      // Close room if host leaves
+      socket.on("roomClosed", () => {
+        alert("🚨 The host has left. The room is now closed.");
+        setRoomId("");
+        setDocumentUrl("");
       });
     });
-  }, []);
+
+    return () => socket.off();
+  }, [userRole]);
+
+  useEffect(() => {
+    const pathParts = location.pathname.split("/");
+    if (pathParts[1] === "join" && pathParts[2]) {
+      const extractedRoomId = pathParts[2];
+      setRoomId(extractedRoomId);
+      setUserRole("sub");
+      socket.emit("joinRoom", extractedRoomId);
+    }
+  }, [location]);
+
+  const createRoom = () => {
+    socket.emit("createRoom");
+    socket.on("roomCreated", ({ roomId }) => {
+      setRoomId(roomId);
+      setUserRole("master");
+      console.log(`✅ Room Created: ${roomId}`);
+    });
+  };
+
+  const handleFileChange = async (event) => {
+    if (userRole !== "master" || !roomId) return;
+
+    const selectedFile = event.target.files[0];
+    if (!selectedFile) return;
+
+    if (selectedFile.type !== "application/pdf") {
+      alert("Please upload a PDF file.");
+      return;
+    }
+
+    const fileUrl = URL.createObjectURL(selectedFile);
+    setDocumentUrl(fileUrl);
+    socket.emit("documentSelected", { roomId, fileUrl });
+  };
 
   return (
     <div className="App">
-      <div className="header">React sample</div>
-      <div className="webviewer" ref={viewer}></div>
+      <div className="header">React PDF Collaboration</div>
+
+      {!userRole && (
+        <div>
+          <label>Select User Role: </label>
+          <button onClick={() => setUserRole("master")}>Master</button>
+          <button onClick={() => setUserRole("sub")}>Sub User</button>
+        </div>
+      )}
+
+      {userRole && (
+        <>
+          <p>Logged in as: {userRole.toUpperCase()}</p>
+
+          {userRole === "master" && !roomId && (
+            <button onClick={createRoom}>Create Room</button>
+          )}
+
+          {roomId && userRole === "master" && (
+            <div>
+              <p>Share this link: <b>{window.location.origin}/join/{roomId}</b></p>
+              <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/join/${roomId}`)}>
+                Copy Link
+              </button>
+            </div>
+          )}
+
+          {userRole === "master" && roomId && <input type="file" onChange={handleFileChange} />}
+          <div className="webviewer" ref={viewer}></div>
+        </>
+      )}
     </div>
   );
 };
