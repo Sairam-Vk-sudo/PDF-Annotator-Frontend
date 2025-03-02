@@ -14,7 +14,7 @@ export default defineConfig({
     setupFiles: '/setupTests.js',
   },
   build: {
-    outDir: 'build',
+    outDir: 'dist',
     rollupOptions: {
       external: ['react-router-dom', "socket.io-client"]
     }
