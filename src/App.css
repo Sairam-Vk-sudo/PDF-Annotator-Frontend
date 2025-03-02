@@ -1,17 +1,107 @@
 .App {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  align-items: center; /* ✅ Centers everything */
+  justify-content: center; /* ✅ Centers everything */
+  background: #f4f6f8;
+  font-family: Arial, sans-serif;
 }
 
-.App .header {
+.header {
   width: 100%;
   height: 60px;
-  padding: 8px 8px 8px 16px;
-  box-sizing: border-box;
-  background: #00a5e4;
-  font-size: 1.2em;
+  padding: 8px 16px;
+  background: #0077b6; /* Darker blue */
+  font-size: 1.5em;
+  font-weight: bold;
   line-height: 44px;
   color: white;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button-container {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+button {
+  padding: 12px 20px;
+  font-size: 1em;
+  font-weight: bold;
+  color: white;
+  background: #0077b6;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+button:hover {
+  background: #005b8f;
+}
+
+.webviewer-container {
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.webviewer {
+  width: 90%;
+  height: 100%;
+}
+
+
+.link-container {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.link-container a {
+  color: #0077b6;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: none;
+  margin-right: 10px;
+}
+
+.link-container a:hover {
+  text-decoration: underline;
+}
+
+.copy-button {
+  background: #0077b6;
+  padding: 6px 12px;
+  font-size: 0.9em;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.copy-button:hover {
+  background: #005b8f;
+}
+
+/* Floating button to re-access links */
+.floating-link-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #ff9800;
+  color: white;
+  font-size: 1em;
+  padding: 10px 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  transition: 0.3s ease;
+}
+
+.floating-link-button:hover {
+  background: #e68900;
 }
